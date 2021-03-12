@@ -1,7 +1,7 @@
 import pygame, random
 from os import path
 
-img_dir = path.join(path.dirname(__file__), )
+img_dir = path.join(path.dirname(__file__), 'img')
 
 WIDTH = 640
 HEIGHT = 480
@@ -22,12 +22,31 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Space Adventure!")
 clock = pygame.time.Clock()
 
+# Load Background graphics
+background = pygame.image.load(path.join(img_dir, 'Background5.png')).convert()
+background_rect = background.get_rect()
+
+# Load Player graphics
+player_img = pygame.image.load(path.join(img_dir, 'Player2.png')).convert_alpha()
+
+# Load Bullet graphics
+bullet_img = pygame.image.load(path.join(img_dir, 'bullet3.png')).convert_alpha()
+
+# Load Enemy graphics
+meteor_imges = []
+meteor_list = ['Meteor1.png', 'Meteor2.png', 'Meteor3.png', 'Meteor4.png', 'Meteor5.png']
+for img in meteor_list:
+    meteor_imges.append(pygame.image.load(path.join(img_dir, img)).convert_alpha())
+
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.Surface((50, 40))
-        self.image.fill(GREEN)
+        # self.image = pygame.Surface((50, 40))
+        # self.image.fill(GREEN)
+        self.image = player_img
         self.rect = self.image.get_rect()
+        self.radius = 25
+        # pygame.draw.circle(self.image, RED, self.rect.center, self.radius)
         self.rect.centerx = WIDTH / 2
         self.rect.bottom = HEIGHT - 10
         self.speedx = 0
@@ -53,13 +72,31 @@ class Player(pygame.sprite.Sprite):
 class Mob(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.Surface((30, 40))
-        self.image.fill(RED)
+        # self.image = pygame.Surface((30, 40))
+        # self.image.fill(RED)
+        self.image_orig = random.choice(meteor_imges)
+        self.image = self.image_orig.copy()
         self.rect = self.image.get_rect()
+        self.radius = int(self.rect.width * .85 / 2)
+        # pygame.draw.circle(self.image, RED, self.rect.center, self.radius)
         self.rect.x = random.randrange(WIDTH - self.rect.width)
-        self.rect.y = random.randrange(-100, -40)
+        self.rect.y = random.randrange(-150, -100)
         self.speedy = random.randrange(1, 8)
         self.speedx = random.randrange(-3, 3)
+        self.rot = 0
+        self.rot_speed = random.randrange(-8, 8)
+        self.last_update = pygame.time.get_ticks()
+
+    def rotate(self):
+        now = pygame.time.get_ticks()
+        if now - self.last_update > 50:
+            self.last_update = now
+            self.rot = (self.rot + self.rot_speed) % 360
+            new_image = pygame.transform.rotate(self.image_orig, self.rot)
+            old_center = self.rect.center
+            self.image = new_image
+            self.rect = self.image.get_rect()
+            self.rect.center = old_center
 
     def update(self):
         self.rect.x += self.speedx
@@ -72,8 +109,9 @@ class Mob(pygame.sprite.Sprite):
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.Surface((10, 20))
-        self.image.fill(YELLOW)
+        # self.image = pygame.Surface((10, 20))
+        # self.image.fill(YELLOW)
+        self.image = bullet_img
         self.rect = self.image.get_rect()
         self.rect.bottom = y
         self.rect.centerx = x
@@ -120,12 +158,13 @@ while running:
         mobs.add(m)
 
     # check to see if a mob hit the player
-    hits = pygame.sprite.spritecollide(player, mobs, False)
+    hits = pygame.sprite.spritecollide(player, mobs, False, pygame.sprite.collide_circle)
     if hits:
         running = False
 
     # Draw / render
     screen.fill(BLACK)
+    screen.blit(background, background_rect)
     all_sprites.draw(screen)
     # *after* drawing everything, flip the display
     pygame.display.flip()
